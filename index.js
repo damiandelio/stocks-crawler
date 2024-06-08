@@ -525,6 +525,7 @@ const CRYPTO_LIST = [
   "AVAX",
   "LEO",
   "LTC",
+  "XEM",
   "XLM",
   "BCH",
 ];
@@ -535,10 +536,6 @@ function getCacheFilePath(assetclass, symbol) {
 
 function getCsvFilePath(assetclass, symbol) {
   return `csv/${assetclass}/${symbol}.csv`;
-}
-
-function getAllStocksSpxFilePath() {
-  return "csv/all_stocks_spx.csv";
 }
 
 async function fetchAndSave(symbol, { assetclass, fromdate, todate, limit }) {
@@ -598,9 +595,10 @@ async function generateAllCSVs(symbols, options) {
   }
 }
 
-async function genetateAllStocksSpxCsv(symbols, { assetclass }) {
+async function genetateCombinedCsv(symbols, { assetclass, outputFileName }) {
+  const outputFile = `csv/${outputFileName}.csv`;
   const csv_header = "symbol,date,close,volume,open,high,low\n";
-  fs.writeFileSync(getAllStocksSpxFilePath(), csv_header);
+  fs.writeFileSync(outputFile, csv_header);
 
   for (let symbol of symbols) {
     try {
@@ -623,31 +621,16 @@ async function genetateAllStocksSpxCsv(symbols, { assetclass }) {
         csv += `${symbol},${date},${close},${volume},${open},${high},${low}\n`;
       }
 
-      fs.appendFileSync(getAllStocksSpxFilePath(), csv);
+      fs.appendFileSync(outputFile, csv);
 
-      console.log(`${symbol} added to ${getAllStocksSpxFilePath()}`);
+      console.log(`${symbol} added to ${outputFile}`);
     } catch (error) {
-      console.error(
-        `Error adding ${symbol} to ${getAllStocksSpxFilePath()}:`,
-        error
-      );
+      console.error(`Error adding ${symbol} to ${outputFile}:`, error);
     }
   }
 }
 
 async function main() {
-  {
-    const options = {
-      assetclass: "crypto",
-      fromdate: "2010-01-01", // The API has a limit of 10 years.
-      todate: "2024-06-07",
-      limit: 99999999,
-    };
-
-    // await fetchAllSymbols(CRYPTO_LIST, options);
-    await generateAllCSVs(CRYPTO_LIST, options);
-  }
-
   {
     const options = {
       assetclass: "stocks",
@@ -661,8 +644,26 @@ async function main() {
   }
 
   {
-    await genetateAllStocksSpxCsv(SPX_LIST, { assetclass: "stocks" });
+    const options = {
+      assetclass: "crypto",
+      fromdate: "2010-01-01", // The API has a limit of 10 years.
+      todate: "2024-06-07",
+      limit: 99999999,
+    };
+
+    await fetchAllSymbols(CRYPTO_LIST, options);
+    await generateAllCSVs(CRYPTO_LIST, options);
   }
+
+  await genetateCombinedCsv(SPX_LIST, {
+    assetclass: "stocks",
+    outputFileName: "all_stocks_spx",
+  });
+
+  await genetateCombinedCsv(CRYPTO_LIST, {
+    assetclass: "crypto",
+    outputFileName: "all_top_crypto",
+  });
 }
 
 main();
