@@ -635,35 +635,35 @@ async function main() {
     const options = {
       assetclass: "stocks",
       fromdate: "2010-01-01", // The API has a limit of 10 years.
-      todate: "2024-06-07",
+      todate: "2024-06-07", // yyyy-mm-dd
       limit: 99999999,
     };
 
-    // await fetchAllSymbols(SPX_LIST, options);
+    await fetchAllSymbols(SPX_LIST, options); // Coment to not fetch.
     await generateAllCSVs(SPX_LIST, options);
+
+    await genetateCombinedCsv(SPX_LIST, {
+      assetclass: "stocks",
+      outputFileName: "all_stocks_spx",
+    });
   }
 
   {
     const options = {
       assetclass: "crypto",
       fromdate: "2010-01-01", // The API has a limit of 10 years.
-      todate: "2024-06-07",
+      todate: "2024-06-07", // yyyy-mm-dd
       limit: 99999999,
     };
 
-    await fetchAllSymbols(CRYPTO_LIST, options);
+    await fetchAllSymbols(CRYPTO_LIST, options); // Coment to not fetch.
     await generateAllCSVs(CRYPTO_LIST, options);
+
+    await genetateCombinedCsv(CRYPTO_LIST, {
+      assetclass: "crypto",
+      outputFileName: "all_top_crypto",
+    });
   }
-
-  await genetateCombinedCsv(SPX_LIST, {
-    assetclass: "stocks",
-    outputFileName: "all_stocks_spx",
-  });
-
-  await genetateCombinedCsv(CRYPTO_LIST, {
-    assetclass: "crypto",
-    outputFileName: "all_top_crypto",
-  });
 }
 
 main();
