@@ -506,6 +506,29 @@ const SPX_LIST = [
   "CMA",
 ];
 
+const CRYPTO_LIST = [
+  "BTC",
+  "ETH",
+  "USDT",
+  "USDT",
+  "BNB",
+  "BUSD",
+  "XRP",
+  "ADA",
+  "SOL",
+  "DOGE",
+  "DOT",
+  "DAI",
+  "MATIC",
+  "SHIB",
+  "TRX",
+  "AVAX",
+  "LEO",
+  "LTC",
+  "XLM",
+  "BCH",
+];
+
 function getCacheFilePath(assetclass, symbol) {
   return `api_cache_json/${assetclass}/${symbol}.json`;
 }
@@ -543,24 +566,50 @@ async function generateAndSaveCSV(symbol, { assetclass }) {
     const data = fs.readFileSync(getCacheFilePath(assetclass, symbol), "utf8");
     const json = JSON.parse(data);
 
-    function writeSymbol() {
-      let csv = "date,close,volume,open,high,low\n";
+    let csv = "date,close,volume,open,high,low\n";
 
-      for (let row of json.data.tradesTable.rows) {
-        const date = row.date.replaceAll("/", "-");
-        const close = parseFloat(row.close.replace("$", ""));
-        const volume = parseFloat(row.volume.replace("$", ""));
-        const open = parseFloat(row.open.replace("$", ""));
-        const high = parseFloat(row.high.replace("$", ""));
-        const low = parseFloat(row.low.replace("$", ""));
+    for (let row of json.data.tradesTable.rows) {
+      const date = row.date.replaceAll("/", "-");
+      const close = parseFloat(row.close.replace("$", ""));
+      const volume = parseFloat(row.volume.replace("$", ""));
+      const open = parseFloat(row.open.replace("$", ""));
+      const high = parseFloat(row.high.replace("$", ""));
+      const low = parseFloat(row.low.replace("$", ""));
 
-        csv += `${date},${close},${volume},${open},${high},${low}\n`;
-      }
-
-      fs.writeFileSync(getCsvFilePath(assetclass, symbol), csv);
+      csv += `${date},${close},${volume},${open},${high},${low}\n`;
     }
 
-    function writeInOneFile() {
+    fs.writeFileSync(getCsvFilePath(assetclass, symbol), csv);
+
+    console.log(`Generated ${symbol}.csv file from ${symbol}.json`);
+  } catch (error) {
+    console.error(`Error genereting ${symbol}.csv:`, error);
+  }
+}
+
+async function fetchAllSymbols(symbols, options) {
+  const fetchPromises = symbols.map((symbol) => fetchAndSave(symbol, options));
+  await Promise.all(fetchPromises);
+}
+
+async function generateAllCSVs(symbols, options) {
+  for (let symbol of symbols) {
+    await generateAndSaveCSV(symbol, options);
+  }
+}
+
+async function genetateAllStocksSpxCsv(symbols, { assetclass }) {
+  const csv_header = "symbol,date,close,volume,open,high,low\n";
+  fs.writeFileSync(getAllStocksSpxFilePath(), csv_header);
+
+  for (let symbol of symbols) {
+    try {
+      const data = fs.readFileSync(
+        getCacheFilePath(assetclass, symbol),
+        "utf8"
+      );
+      const json = JSON.parse(data);
+
       let csv = "";
 
       for (let row of json.data.tradesTable.rows) {
@@ -575,41 +624,45 @@ async function generateAndSaveCSV(symbol, { assetclass }) {
       }
 
       fs.appendFileSync(getAllStocksSpxFilePath(), csv);
+
+      console.log(`${symbol} added to ${getAllStocksSpxFilePath()}`);
+    } catch (error) {
+      console.error(
+        `Error adding ${symbol} to ${getAllStocksSpxFilePath()}:`,
+        error
+      );
     }
-
-    writeSymbol();
-    writeInOneFile();
-
-    console.log(`Generated ${symbol}.csv file from ${symbol}.json`);
-  } catch (error) {
-    console.error(`Error genereting ${symbol}.csv:`, error);
-  }
-}
-
-async function fetchAllSymbols(symbols, options) {
-  const fetchPromises = symbols.map((symbol) => fetchAndSave(symbol, options));
-  await Promise.all(fetchPromises);
-}
-
-async function generateAllCSVs(symbols, options) {
-  const spx_csv_header = "symbol,date,close,volume,open,high,low\n";
-  fs.writeFileSync(getAllStocksSpxFilePath(), spx_csv_header);
-
-  for (let symbol of symbols) {
-    await generateAndSaveCSV(symbol, options);
   }
 }
 
 async function main() {
-  const options = {
-    assetclass: "stocks",
-    fromdate: "2010-01-01", // The API has a limit of 10 years.
-    todate: "2024-06-07",
-    limit: 99999999,
-  };
+  {
+    const options = {
+      assetclass: "crypto",
+      fromdate: "2010-01-01", // The API has a limit of 10 years.
+      todate: "2024-06-07",
+      limit: 99999999,
+    };
 
-  // await fetchAllSymbols(SPX_LIST, options);
-  await generateAllCSVs(SPX_LIST, options);
+    // await fetchAllSymbols(CRYPTO_LIST, options);
+    await generateAllCSVs(CRYPTO_LIST, options);
+  }
+
+  {
+    const options = {
+      assetclass: "stocks",
+      fromdate: "2010-01-01", // The API has a limit of 10 years.
+      todate: "2024-06-07",
+      limit: 99999999,
+    };
+
+    // await fetchAllSymbols(SPX_LIST, options);
+    await generateAllCSVs(SPX_LIST, options);
+  }
+
+  {
+    await genetateAllStocksSpxCsv(SPX_LIST, { assetclass: "stocks" });
+  }
 }
 
 main();
