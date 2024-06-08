@@ -1,7 +1,6 @@
 const fs = require("fs");
-// const converter = require("json-2-csv");
 
-const SPX = [
+const SPX_LIST = [
   "MSFT",
   "AAPL",
   "NVDA",
@@ -507,74 +506,110 @@ const SPX = [
   "CMA",
 ];
 
-function getFilePath(symbol) {
-  return `json/${symbol}.json`;
+function getCacheFilePath(assetclass, symbol) {
+  return `api_cache_json/${assetclass}/${symbol}.json`;
 }
 
-async function fetchAndSave(symbol) {
-  const assetclass = "stocks";
-  const fromdate = "2010-01-01";
-  const todate = "2024-06-07";
-  const limit = 99999999;
+function getCsvFilePath(assetclass, symbol) {
+  return `csv/${assetclass}/${symbol}.csv`;
+}
 
+function getAllStocksSpxFilePath() {
+  return "csv/all_stocks_spx.csv";
+}
+
+async function fetchAndSave(symbol, { assetclass, fromdate, todate, limit }) {
   try {
     const response = await fetch(
       `https://api.nasdaq.com/api/quote/${symbol}/historical?assetclass=${assetclass}&fromdate=${fromdate}&todate=${todate}&limit=${limit}`
     );
+
     const data = await response.json();
 
     // Guardar la respuesta en un archivo JSON
-    fs.writeFileSync(getFilePath(symbol), JSON.stringify(data, null, 2));
+    fs.writeFileSync(
+      getCacheFilePath(assetclass, symbol),
+      JSON.stringify(data, null, 2)
+    );
+
     console.log(`Response from ${symbol} saved to ${symbol}.json`);
   } catch (error) {
     console.error(`Error fetching ${symbol}:`, error);
   }
 }
 
-async function fetchAllSymbols(symbols, index = 0) {
-  if (index >= symbols.length) return;
-
-  await fetchAndSave(symbols[index]);
-  fetchAllSymbols(symbols, index + 1);
-}
-
-async function generateAndSaveCSV(symbol) {
+async function generateAndSaveCSV(symbol, { assetclass }) {
   try {
-    const data = fs.readFileSync(getFilePath(symbol), "utf8");
-
+    const data = fs.readFileSync(getCacheFilePath(assetclass, symbol), "utf8");
     const json = JSON.parse(data);
 
-    let csv = "date,close,volume,open,high,low\n";
+    function writeSymbol() {
+      let csv = "date,close,volume,open,high,low\n";
 
-    for (let row of json.data.tradesTable.rows) {
-      const date = row.date.replaceAll("/", "-");
-      const close = row.close.replace("$", "");
-      const volume = row.volume.replace("$", "");
-      const open = row.open.replace("$", "");
-      const high = row.high.replace("$", "");
-      const low = row.low.replace("$", "");
+      for (let row of json.data.tradesTable.rows) {
+        const date = row.date.replaceAll("/", "-");
+        const close = parseFloat(row.close.replace("$", ""));
+        const volume = parseFloat(row.volume.replace("$", ""));
+        const open = parseFloat(row.open.replace("$", ""));
+        const high = parseFloat(row.high.replace("$", ""));
+        const low = parseFloat(row.low.replace("$", ""));
 
-      csv += `${date},${close},${volume},${open},${high},${low}\n`;
+        csv += `${date},${close},${volume},${open},${high},${low}\n`;
+      }
+
+      fs.writeFileSync(getCsvFilePath(assetclass, symbol), csv);
     }
 
-    fs.writeFileSync(`csv/${symbol}.csv`, csv);
+    function writeInOneFile() {
+      let csv = "";
 
-    console.log(`Data from ${symbol}.json saved to ${symbol}.csv`);
+      for (let row of json.data.tradesTable.rows) {
+        const date = row.date.replaceAll("/", "-");
+        const close = parseFloat(row.close.replace("$", ""));
+        const volume = parseFloat(row.volume.replace("$", ""));
+        const open = parseFloat(row.open.replace("$", ""));
+        const high = parseFloat(row.high.replace("$", ""));
+        const low = parseFloat(row.low.replace("$", ""));
+
+        csv += `${symbol},${date},${close},${volume},${open},${high},${low}\n`;
+      }
+
+      fs.appendFileSync(getAllStocksSpxFilePath(), csv);
+    }
+
+    writeSymbol();
+    writeInOneFile();
+
+    console.log(`Generated ${symbol}.csv file from ${symbol}.json`);
   } catch (error) {
-    console.error(`Error ${symbol}.json:`, error);
+    console.error(`Error genereting ${symbol}.csv:`, error);
   }
 }
 
-async function generateAllCSVs(symbols, index = 0) {
-  if (index >= symbols.length) return;
+async function fetchAllSymbols(symbols, options) {
+  const fetchPromises = symbols.map((symbol) => fetchAndSave(symbol, options));
+  await Promise.all(fetchPromises);
+}
 
-  await generateAndSaveCSV(symbols[index]);
-  generateAllCSVs(symbols, index + 1);
+async function generateAllCSVs(symbols, options) {
+  const spx_csv_header = "symbol,date,close,volume,open,high,low\n";
+  fs.writeFileSync(getAllStocksSpxFilePath(), spx_csv_header);
+
+  for (let symbol of symbols) {
+    await generateAndSaveCSV(symbol, options);
+  }
 }
 
 async function main() {
-  // await fetchAllSymbols(SPX);
-  await generateAllCSVs(SPX);
+  const options = {
+    assetclass: "stocks",
+    fromdate: "2010-01-01", // The API has a limit of 10 years.
+    todate: "2024-06-07",
+    limit: 99999999,
+  };
+
+  // await fetchAllSymbols(SPX_LIST, options);
+  await generateAllCSVs(SPX_LIST, options);
 }
 
 main();
