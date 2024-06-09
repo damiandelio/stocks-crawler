@@ -12,11 +12,11 @@ function sanitizeDateString(dateStr) {
 }
 
 function getCacheFilePath(assetclass, symbol) {
-  return `api_cache_json/${assetclass}/${symbol}.json`;
+  return `output/api_cache_json/${assetclass}/${symbol}.json`;
 }
 
 function getCsvFilePath(assetclass, symbol) {
-  return `csv/${assetclass}/${symbol}.csv`;
+  return `output/csv/${assetclass}/${symbol}.csv`;
 }
 
 async function fetchAndSave(symbol, { assetclass, fromdate, todate, limit }) {
@@ -67,7 +67,9 @@ async function generateAndSaveCSV(symbol, { assetclass }) {
 
 export async function fetchAllSymbols(symbols, options) {
   // Create the folder to store the files.
-  fs.mkdirSync(`./api_cache_json/${options.assetclass}`, { recursive: true });
+  fs.mkdirSync(`./output/api_cache_json/${options.assetclass}`, {
+    recursive: true,
+  });
 
   const fetchPromises = symbols.map((symbol) => fetchAndSave(symbol, options));
   await Promise.all(fetchPromises);
@@ -75,7 +77,7 @@ export async function fetchAllSymbols(symbols, options) {
 
 export async function generateAllCSVs(symbols, options) {
   // Create the folder to store the files.
-  fs.mkdirSync(`./csv/${options.assetclass}`, { recursive: true });
+  fs.mkdirSync(`./output/csv/${options.assetclass}`, { recursive: true });
 
   for (let symbol of symbols) {
     await generateAndSaveCSV(symbol, options);
@@ -86,7 +88,7 @@ export async function genetateCombinedCsv(
   symbols,
   { assetclass, outputFileName }
 ) {
-  const outputFile = `csv/${outputFileName}.csv`;
+  const outputFile = `output/csv/${outputFileName}.csv`;
   const csv_header = "symbol,date,close,volume,open,high,low\n";
   fs.writeFileSync(outputFile, csv_header);
 
