@@ -2,6 +2,17 @@ import fs from "fs";
 import { SPX_LIST } from "./utils/spx_list.mjs";
 import { CRYPTO_LIST } from "./utils/crypto_list.mjs";
 
+function sanitizeNumericString(numStr) {
+  // Replace all "$" and "," with an empty spaces.
+  // Replace "N/A" with an empty space.
+  return numStr.replace(/[$,]/g, "").replace("N/A", "");
+}
+
+function sanitizeDateString(dateStr) {
+  // "2015/01/01" -> "2015-01-01"
+  return dateStr.replaceAll("/", "-");
+}
+
 function getCacheFilePath(assetclass, symbol) {
   return `api_cache_json/${assetclass}/${symbol}.json`;
 }
@@ -38,12 +49,12 @@ async function generateAndSaveCSV(symbol, { assetclass }) {
     let csv = "date,close,volume,open,high,low\n";
 
     for (let row of json.data.tradesTable.rows) {
-      const date = row.date.replaceAll("/", "-");
-      const close = parseFloat(row.close.replace("$", ""));
-      const volume = parseFloat(row.volume.replace("$", ""));
-      const open = parseFloat(row.open.replace("$", ""));
-      const high = parseFloat(row.high.replace("$", ""));
-      const low = parseFloat(row.low.replace("$", ""));
+      const date = sanitizeDateString(row.date);
+      const close = sanitizeNumericString(row.close);
+      const volume = sanitizeNumericString(row.volume);
+      const open = sanitizeNumericString(row.open);
+      const high = sanitizeNumericString(row.high);
+      const low = sanitizeNumericString(row.low);
 
       csv += `${date},${close},${volume},${open},${high},${low}\n`;
     }
@@ -83,12 +94,12 @@ async function genetateCombinedCsv(symbols, { assetclass, outputFileName }) {
       let csv = "";
 
       for (let row of json.data.tradesTable.rows) {
-        const date = row.date.replaceAll("/", "-");
-        const close = parseFloat(row.close.replace("$", ""));
-        const volume = parseFloat(row.volume.replace("$", ""));
-        const open = parseFloat(row.open.replace("$", ""));
-        const high = parseFloat(row.high.replace("$", ""));
-        const low = parseFloat(row.low.replace("$", ""));
+        const date = sanitizeDateString(row.date);
+        const close = sanitizeNumericString(row.close);
+        const volume = sanitizeNumericString(row.volume);
+        const open = sanitizeNumericString(row.open);
+        const high = sanitizeNumericString(row.high);
+        const low = sanitizeNumericString(row.low);
 
         csv += `${symbol},${date},${close},${volume},${open},${high},${low}\n`;
       }
