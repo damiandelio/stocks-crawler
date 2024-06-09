@@ -68,11 +68,17 @@ async function generateAndSaveCSV(symbol, { assetclass }) {
 }
 
 async function fetchAllSymbols(symbols, options) {
+  // Create the folder to store the files.
+  fs.mkdirSync(`./api_cache_json/${options.assetclass}`, { recursive: true });
+
   const fetchPromises = symbols.map((symbol) => fetchAndSave(symbol, options));
   await Promise.all(fetchPromises);
 }
 
 async function generateAllCSVs(symbols, options) {
+  // Create the folder to store the files.
+  fs.mkdirSync(`./csv/${options.assetclass}`, { recursive: true });
+
   for (let symbol of symbols) {
     await generateAndSaveCSV(symbol, options);
   }
